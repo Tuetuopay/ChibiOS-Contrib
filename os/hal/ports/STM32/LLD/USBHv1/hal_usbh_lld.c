@@ -1506,7 +1506,7 @@ static void _usbh_start(USBHDriver *usbh) {
 	{
 		/* OTG HS clock enable and reset.*/
 		rccEnableOTG_HS(TRUE); // Enable HS clock when cpu is in sleep mode
-		rccDisableOTG_HSULPI(TRUE); // Disable HS ULPI clock when cpu is in sleep mode
+		rccDisableOTG_HSULPI(); // Disable HS ULPI clock when cpu is in sleep mode
 		rccResetOTG_HS();
 
 		otgp->GINTMSK = 0;
