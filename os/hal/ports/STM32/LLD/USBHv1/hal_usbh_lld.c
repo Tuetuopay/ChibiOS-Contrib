@@ -1363,6 +1363,7 @@ static void usb_lld_serve_interrupt(USBHDriver *host) {
 /* Interrupt handlers.                                                       */
 /*===========================================================================*/
 
+#if (!defined(STM32_USB_OTG_USE_PROXY_IRQ) || !STM32_USB_OTG_USE_PROXY_IRQ) && !STM32_USB_USE_OTG1
 #if STM32_USBH_USE_OTG1
 OSAL_IRQ_HANDLER(STM32_OTG1_HANDLER) {
 	OSAL_IRQ_PROLOGUE();
@@ -1372,7 +1373,9 @@ OSAL_IRQ_HANDLER(STM32_OTG1_HANDLER) {
 	OSAL_IRQ_EPILOGUE();
 }
 #endif
+#endif
 
+#if (!defined(STM32_USB_OTG_USE_PROXY_IRQ) || !STM32_USB_OTG_USE_PROXY_IRQ) && !STM32_USB_USE_OTG2
 #if STM32_USBH_USE_OTG2
 OSAL_IRQ_HANDLER(STM32_OTG2_HANDLER) {
 	OSAL_IRQ_PROLOGUE();
@@ -1381,6 +1384,7 @@ OSAL_IRQ_HANDLER(STM32_OTG2_HANDLER) {
 	osalSysUnlockFromISR();
 	OSAL_IRQ_EPILOGUE();
 }
+#endif
 #endif
 
 
@@ -1426,6 +1430,18 @@ static void otg_txfifo_flush(USBHDriver *usbp, uint32_t fifo) {
 	;
   /* Wait for 3 PHY Clocks.*/
   osalSysPolledDelayX(24);
+}
+
+static void _irq_proxy_fs(void) {
+	osalSysLockFromISR();
+	usb_lld_serve_interrupt(&USBHD1);
+	osalSysUnlockFromISR();
+}
+
+static void _irq_proxy_hs(void) {
+	osalSysLockFromISR();
+	usb_lld_serve_interrupt(&USBHD2);
+	osalSysUnlockFromISR();
 }
 
 static void _init(USBHDriver *host) {
@@ -1496,6 +1512,10 @@ static void _usbh_start(USBHDriver *usbh) {
 
 		/* Enables IRQ vector.*/
 		nvicEnableVector(STM32_OTG1_NUMBER, STM32_USB_OTG1_IRQ_PRIORITY);
+
+#if defined(STM32_USB_OTG_USE_PROXY_IRQ) && STM32_USB_OTG_USE_PROXY_IRQ && STM32_USB_USE_OTG1
+		USBD1.irqOverride = _irq_proxy_fs;
+#endif
 	}
 #endif
 
@@ -1513,6 +1533,10 @@ static void _usbh_start(USBHDriver *usbh) {
 
 		/* Enables IRQ vector.*/
 		nvicEnableVector(STM32_OTG2_NUMBER, STM32_USB_OTG2_IRQ_PRIORITY);
+
+#if defined(STM32_USB_OTG_USE_PROXY_IRQ) && STM32_USB_OTG_USE_PROXY_IRQ && STM32_USB_USE_OTG2
+		USBD2.irqOverride = _irq_proxy_hs;
+#endif
 	}
 #endif
 
